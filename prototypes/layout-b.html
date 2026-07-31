@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vibe-Vision — Plan vs Built (Layout B)</title>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --surface-2: #f0eeea;
+    --ink: #2b2a26;
+    --ink-soft: #6f6c64;
+    --ink-faint: #a19d93;
+    --line: #e4e1da;
+    --line-strong: #cfcbc2;
+
+    --ok: #3e7d5a;
+    --ok-soft: #e7f0ea;
+    --warn: #a97b2a;
+    --warn-soft: #f5eddd;
+    --miss: #a85a52;
+    --miss-soft: #f4e7e5;
+    --extra: #6b5ca5;
+    --extra-soft: #ebe8f4;
+
+    --radius: 14px;
+    --shadow: 0 1px 3px rgba(40,38,33,.06), 0 6px 20px rgba(40,38,33,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1a18;
+      --surface: #242320;
+      --surface-2: #2c2b27;
+      --ink: #e9e7e1;
+      --ink-soft: #a5a198;
+      --ink-faint: #767268;
+      --line: #37352f;
+      --line-strong: #47443c;
+
+      --ok: #7fb896;
+      --ok-soft: #24352b;
+      --warn: #d0a355;
+      --warn-soft: #3a3122;
+      --miss: #cf8a82;
+      --miss-soft: #3c2a28;
+      --extra: #a99cd6;
+      --extra-soft: #2f2b3d;
+
+      --shadow: 0 1px 3px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    padding: 40px 24px 80px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+
+  /* ---------- Header ---------- */
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
+  h1 { font-size: 21px; font-weight: 650; letter-spacing: -.01em; }
+  h1 .proj { color: var(--ink-soft); font-weight: 450; }
+  .live {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--ink-soft);
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 12px;
+  }
+  .live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pulse 2.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1);} 50% { opacity: .35; transform: scale(.8);} }
+  .tagline { color: var(--ink-soft); font-size: 14px; margin-bottom: 28px; }
+
+  /* ---------- Legend ---------- */
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 30px; font-size: 12.5px; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* ---------- Map sections ---------- */
+  .map {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px 24px 26px;
+  }
+  .map-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .map-title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 650; }
+  .map-badge {
+    font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .badge-frozen { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line-strong); }
+  .badge-live { background: var(--ok-soft); color: var(--ok); }
+  .map-sub { font-size: 13px; color: var(--ink-soft); font-weight: 400; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 13px 14px 12px;
+    background: var(--surface);
+    cursor: pointer;
+    display: flex; flex-direction: column; gap: 8px;
+    min-height: 86px;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  .card:hover, .card.linked { border-color: var(--line-strong); box-shadow: 0 2px 10px rgba(40,38,33,.08); }
+  .card.linked { background: var(--surface-2); }
+  .card:focus-visible { outline: 2px solid var(--extra); outline-offset: 2px; }
+  .card .name { font-size: 13.5px; font-weight: 550; line-height: 1.35; }
+  .card .state { font-size: 11.5px; display: inline-flex; align-items: center; gap: 6px; margin-top: auto; }
+
+  .card.ghost {
+    border-style: dashed; cursor: pointer; background: transparent;
+  }
+  .card.ghost .name { color: var(--ink-faint); }
+  .card.extra-card { border-color: color-mix(in srgb, var(--extra) 40%, var(--line)); }
+
+  .state.ok    { color: var(--ok); }
+  .state.warn  { color: var(--warn); }
+  .state.miss  { color: var(--miss); }
+  .state.extra { color: var(--extra); }
+
+  /* connector rail between maps */
+  .rail { display: flex; justify-content: center; padding: 6px 0; }
+  .rail svg { color: var(--ink-faint); }
+
+  /* extras row inside built map */
+  .extras-label {
+    grid-column: 1 / -1;
+    font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--extra); margin-top: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .extras-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  /* ---------- Toggle (features / under the hood) ---------- */
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface-2); }
+  .seg button {
+    border: 0; background: transparent; color: var(--ink-soft);
+    font: 550 12.5px/1 inherit; font-family: inherit; padding: 7px 14px; cursor: pointer;
+  }
+  .seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); border-radius: 999px; }
+
+  /* ---------- Architecture view ---------- */
+  #archView { display: none; }
+  #archView.show { display: block; }
+  #featView.hide { display: none; }
+  .arch-hint { font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
+  .arch-svg { width: 100%; height: auto; display: block; }
+  .node rect {
+    fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 1; rx: 10;
+    transition: fill .15s, stroke .15s;
+  }
+  .node text { fill: var(--ink); font-size: 13px; font-weight: 550; }
+  .node { cursor: pointer; }
+  .node:hover rect { stroke: var(--ink-faint); }
+  .node.sel rect { fill: var(--extra-soft); stroke: var(--extra); stroke-width: 1.5; }
+  .node.dep rect { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+  .node.dim { opacity: .35; }
+  .edge { stroke: var(--line-strong); stroke-width: 1.5; fill: none; transition: stroke .15s, opacity .15s; }
+  .edge.hot { stroke: var(--extra); stroke-width: 2.2; }
+  .edge.dim { opacity: .2; }
+  .arch-sentence {
+    margin-top: 14px; font-size: 13.5px; color: var(--ink-soft);
+    background: var(--surface-2); border-radius: 9px; padding: 10px 14px; min-height: 41px;
+  }
+  .arch-sentence strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Diff strip ---------- */
+  .strip {
+    margin-top: 26px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px 22px;
+  }
+  .strip h2 { font-size: 14px; font-weight: 650; margin-bottom: 16px; }
+  .strip-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  @media (max-width: 760px) { .strip-cols { grid-template-columns: repeat(2, 1fr); } }
+  .strip-col .head { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; margin-bottom: 10px; }
+  .strip-col .count { font-size: 12px; font-weight: 650; border-radius: 999px; padding: 1px 8px; }
+  .col-miss .head  { color: var(--miss); }  .col-miss .count  { background: var(--miss-soft); color: var(--miss); }
+  .col-warn .head  { color: var(--warn); }  .col-warn .count  { background: var(--warn-soft); color: var(--warn); }
+  .col-ok .head    { color: var(--ok); }    .col-ok .count    { background: var(--ok-soft); color: var(--ok); }
+  .col-extra .head { color: var(--extra); } .col-extra .count { background: var(--extra-soft); color: var(--extra); }
+  .chips { display: flex; flex-direction: column; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12.5px; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 10px; cursor: pointer; text-align: left;
+    font-family: inherit;
+    transition: border-color .15s;
+  }
+  .chip:hover { border-color: var(--line-strong); }
+
+  /* ---------- Detail panel ---------- */
+  #panel {
+    position: fixed; right: 20px; bottom: 20px; width: 330px; max-width: calc(100vw - 40px);
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: 0 8px 40px rgba(0,0,0,.18);
+    padding: 20px 20px 18px; z-index: 50;
+    display: none;
+  }
+  #panel.open { display: block; animation: rise .18s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none;} }
+  #panel .p-close {
+    position: absolute; top: 10px; right: 10px; border: 0; background: transparent;
+    color: var(--ink-faint); font-size: 18px; cursor: pointer; line-height: 1; padding: 6px;
+    font-family: inherit;
+  }
+  #panel .p-close:hover { color: var(--ink); }
+  #panel h3 { font-size: 15px; font-weight: 650; margin-bottom: 8px; padding-right: 20px; }
+  #panel .p-status { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; border-radius: 999px; padding: 4px 11px; margin-bottom: 12px; }
+  #panel .p-explain { font-size: 13.5px; color: var(--ink-soft); margin-bottom: 14px; }
+  #panel .p-evidence h4 { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px; }
+  #panel .p-evidence ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  #panel .p-evidence li {
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--ink-soft); background: var(--surface-2); border-radius: 6px; padding: 5px 9px;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #panel .p-none { font-size: 12.5px; color: var(--ink-faint); font-style: italic; }
+
+  footer { margin-top: 40px; text-align: center; font-size: 12px; color: var(--ink-faint); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>PlantPal <span class="proj">· plan vs built</span></h1>
+    <span class="live"><span class="dot"></span> Watching your repo · last update 2s ago</span>
+  </header>
+  <p class="tagline">Top: what you planned. Bottom: what your AI has actually built. The strip shows the gap.</p>
+
+  <div class="legend" id="legend"></div>
+
+  <!-- ============ PLAN MAP (frozen) ============ -->
+  <section class="map" aria-label="The plan">
+    <div class="map-head">
+      <div class="map-title">
+        The plan
+        <span class="map-badge badge-frozen">
+          <svg width="10" height="12" viewBox="0 0 10 12" fill="none" aria-hidden="true"><rect x="1" y="5" width="8" height="6" rx="1.5" fill="currentColor"/><path d="M3 5V3.5a2 2 0 1 1 4 0V5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+          Locked
+        </span>
+      </div>
+      <span class="map-sub">Every feature you asked for, as designed.</span>
+    </div>
+    <div class="grid" id="planGrid"></div>
+  </section>
+
+  <div class="rail" aria-hidden="true">
+    <svg width="22" height="26" viewBox="0 0 22 26" fill="none">
+      <path d="M11 1v18m0 0l-5-5m5 5l5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <!-- ============ BUILT MAP (live) ============ -->
+  <section class="map" aria-label="What's built">
+    <div class="map-head">
+      <div class="map-title">
+        What&rsquo;s built
+        <span class="map-badge badge-live"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span> Live</span>
+      </div>
+      <div class="seg" role="tablist">
+        <button class="on" id="tabFeat" role="tab" aria-selected="true">Features</button>
+        <button id="tabArch" role="tab" aria-selected="false">Under the hood</button>
+      </div>
+    </div>
+
+    <div id="featView">
+      <div class="grid" id="builtGrid"></div>
+    </div>
+
+    <div id="archView">
+      <p class="arch-hint">The building blocks of the app. Tap one to see what it relies on.</p>
+      <svg class="arch-svg" viewBox="0 0 660 300" id="archSvg" aria-label="App building blocks"></svg>
+      <div class="arch-sentence" id="archSentence">Nothing selected yet — tap a block above.</div>
+    </div>
+  </section>
+
+  <!-- ============ DIFF STRIP ============ -->
+  <section class="strip" aria-label="The gap at a glance">
+    <h2>The gap at a glance</h2>
+    <div class="strip-cols" id="stripCols"></div>
+  </section>
+
+  <footer>Prototype · all data is illustrative</footer>
+</div>
+
+<!-- ============ DETAIL PANEL ============ -->
+<aside id="panel" role="dialog" aria-modal="false" aria-label="Feature details">
+  <button class="p-close" id="panelClose" aria-label="Close">&times;</button>
+  <h3 id="pName"></h3>
+  <span class="p-status" id="pStatus"></span>
+  <p class="p-explain" id="pExplain"></p>
+  <div class="p-evidence" id="pEvidence"></div>
+</aside>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- Data ---------------- */
+  var features = [
+    {id:"auth", name:"Sign in with email", status:"in-both", verified:true, evidence:["src/auth/login.ts","src/auth/session.ts"]},
+    {id:"plants", name:"Add & edit plants", status:"in-both", verified:true, evidence:["src/plants/crud.ts","src/plants/form.tsx"]},
+    {id:"photos", name:"Plant photo gallery", status:"in-both", verified:false, evidence:["src/photos/upload.ts"]},
+    {id:"watering", name:"Watering schedule & reminders", status:"in-plan-only", evidence:[]},
+    {id:"identify", name:"Identify plant from photo", status:"in-plan-only", evidence:[]},
+    {id:"share", name:"Share my garden page", status:"in-plan-only", evidence:[]},
+    {id:"export", name:"CSV export of care log", status:"in-code-only", evidence:["src/export/csv.ts"]},
+    {id:"darkmode", name:"Dark mode toggle", status:"in-code-only", evidence:["src/theme/dark.ts"]},
+    {id:"careLog", name:"Care log timeline", status:"in-both", verified:false, evidence:["src/log/timeline.tsx","src/log/store.ts"]},
+    {id:"notify", name:"Push notifications", status:"in-plan-only", evidence:[]}
+  ];
+  var byId = {};
+  features.forEach(function (f) { byId[f.id] = f; });
+
+  /* Four kinds, each with its own SHAPE (not color alone) */
+  var KIND = {
+    ok:    { label: "Confirmed working",   cls: "ok",
+             explain: "This was in your plan, the AI built it, and it passed a check. You can trust it." },
+    warn:  { label: "Built, not checked",  cls: "warn",
+             explain: "The AI built this, but nobody has confirmed it actually works yet. Worth a look before you rely on it." },
+    miss:  { label: "Not built yet",       cls: "miss",
+             explain: "This is in your plan, but nothing in the code does it yet. It only exists on paper." },
+    extra: { label: "Extra — not planned", cls: "extra",
+             explain: "The AI added this on its own. It was never in your plan — keep it or ask for it to be removed." }
+  };
+  function kindOf(f) {
+    if (f.status === "in-plan-only") return "miss";
+    if (f.status === "in-code-only") return "extra";
+    return f.verified ? "ok" : "warn";
+  }
+
+  /* Shape-coded icons (SVG) — check-in-circle, ?-in-circle, dashed circle, diamond */
+  function icon(kind, size) {
+    size = size || 15;
+    var s = 'width="' + size + '" height="' + size + '" viewBox="0 0 16 16" aria-hidden="true"';
+    if (kind === "ok") return '<svg ' + s + '><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.8 8.2l2.1 2.1 4.3-4.6" stroke="var(--surface)" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    if (kind === "warn") return '<svg ' + s + '><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="8" y="11.4" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor">?</text></svg>';
+    if (kind === "miss") return '<svg ' + s + '><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.6 2.6"/></svg>';
+    return '<svg ' + s + '><rect x="3.2" y="3.2" width="9.6" height="9.6" rx="1.5" fill="currentColor" transform="rotate(45 8 8)"/></svg>'; /* extra: diamond */
+  }
+
+  /* ---------------- Legend ---------------- */
+  var legendEl = document.getElementById("legend");
+  ["ok", "warn", "miss", "extra"].forEach(function (k) {
+    var span = document.createElement("span");
+    span.className = "state " + KIND[k].cls;
+    span.innerHTML = icon(k, 13) + " " + KIND[k].label;
+    legendEl.appendChild(span);
+  });
+
+  /* ---------------- Maps ----------------
+     Plan order fixes the grid. Built map mirrors the SAME positions,
+     so the eye can match cards column-for-column; extras get their own row. */
+  var planOrder = ["auth", "plants", "photos", "careLog", "watering", "identify", "share", "notify"];
+  var extras = ["export", "darkmode"];
+
+  function cardHTML(f, ghost) {
+    var k = ghost ? "miss" : kindOf(f);
+    var stateText = ghost ? "Not built yet" : KIND[k].label;
+    return '<div class="name">' + f.name + '</div>' +
+      '<span class="state ' + KIND[k].cls + '">' + icon(k) + ' ' + stateText + '</span>';
+  }
+
+  function makeCard(f, opts) {
+    opts = opts || {};
+    var el = document.createElement("div");
+    el.className = "card" + (opts.ghost ? " ghost" : "") + (opts.extra ? " extra-card" : "");
+    el.setAttribute("tabindex", "0");
+    el.setAttribute("role", "button");
+    el.dataset.fid = f.id;
+    el.innerHTML = cardHTML(f, false); /* ghost styling comes from the .ghost class; label from kindOf */
+    el.addEventListener("click", function () { openPanel(f.id); });
+    el.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPanel(f.id); } });
+    el.addEventListener("mouseenter", function () { crossHighlight(f.id, true); });
+    el.addEventListener("mouseleave", function () { crossHighlight(f.id, false); });
+    return el;
+  }
+
+  var planGrid = document.getElementById("planGrid");
+  var builtGrid = document.getElementById("builtGrid");
+
+  planOrder.forEach(function (id) {
+    var f = byId[id];
+    /* Plan side shows the feature as designed — no build status, it's the locked plan */
+    var el = makeCard(f, {});
+    el.innerHTML = '<div class="name">' + f.name + '</div>' +
+      '<span class="state" style="color:var(--ink-faint)">' +
+      '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="6.5" width="11" height="7.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 6.5V5a2.5 2.5 0 1 1 5 0v1.5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>' +
+      ' In the plan</span>';
+    planGrid.appendChild(el);
+  });
+
+  planOrder.forEach(function (id) {
+    var f = byId[id];
+    var k = kindOf(f);
+    builtGrid.appendChild(makeCard(f, { ghost: k === "miss" }));
+  });
+  var extrasLabel = document.createElement("div");
+  extrasLabel.className = "extras-label";
+  extrasLabel.textContent = "Not in your plan";
+  builtGrid.appendChild(extrasLabel);
+  extras.forEach(function (id) {
+    builtGrid.appendChild(makeCard(byId[id], { extra: true }));
+  });
+
+  /* Hover a feature → its twin on the other map lights up */
+  function crossHighlight(fid, on) {
+    document.querySelectorAll('[data-fid="' + fid + '"]').forEach(function (el) {
+      el.classList.toggle("linked", on);
+    });
+  }
+
+  /* ---------------- Diff strip ---------------- */
+  var groups = [
+    { kind: "miss",  cls: "col-miss",  title: "Missing" },
+    { kind: "warn",  cls: "col-warn",  title: "Needs a check" },
+    { kind: "ok",    cls: "col-ok",    title: "Confirmed" },
+    { kind: "extra", cls: "col-extra", title: "Extras" }
+  ];
+  var stripCols = document.getElementById("stripCols");
+  groups.forEach(function (g) {
+    var items = features.filter(function (f) { return kindOf(f) === g.kind; });
+    var col = document.createElement("div");
+    col.className = "strip-col " + g.cls;
+    var head = document.createElement("div");
+    head.className = "head";
+    head.innerHTML = icon(g.kind, 14) + " " + g.title + ' <span class="count">' + items.length + "</span>";
+    col.appendChild(head);
+    var chips = document.createElement("div");
+    chips.className = "chips";
+    items.forEach(function (f) {
+      var b = document.createElement("button");
+      b.className = "chip";
+      b.dataset.fid = f.id;
+      b.textContent = f.name;
+      b.addEventListener("click", function () { openPanel(f.id); });
+      b.addEventListener("mouseenter", function () { crossHighlight(f.id, true); });
+      b.addEventListener("mouseleave", function () { crossHighlight(f.id, false); });
+      chips.appendChild(b);
+    });
+    col.appendChild(chips);
+    stripCols.appendChild(col);
+  });
+
+  /* ---------------- Detail panel ---------------- */
+  var panel = document.getElementById("panel");
+  function openPanel(fid) {
+    var f = byId[fid];
+    var k = kindOf(f);
+    document.getElementById("pName").textContent = f.name;
+    var st = document.getElementById("pStatus");
+    st.className = "p-status state " + KIND[k].cls;
+    st.style.background = "var(--" + KIND[k].cls + "-soft)";
+    st.innerHTML = icon(k, 13) + " " + KIND[k].label;
+    document.getElementById("pExplain").textContent = KIND[k].explain;
+    var ev = document.getElementById("pEvidence");
+    if (f.evidence.length) {
+      ev.innerHTML = "<h4>Where it lives in the code</h4><ul>" +
+        f.evidence.map(function (p) { return "<li>" + p + "</li>"; }).join("") + "</ul>";
+    } else {
+      ev.innerHTML = '<h4>Where it lives in the code</h4><p class="p-none">Nowhere yet — no code found for this.</p>';
+    }
+    panel.classList.add("open");
+  }
+  document.getElementById("panelClose").addEventListener("click", function () {
+    panel.classList.remove("open");
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") panel.classList.remove("open");
+  });
+
+  /* ---------------- Features / Under-the-hood toggle ---------------- */
+  var tabFeat = document.getElementById("tabFeat");
+  var tabArch = document.getElementById("tabArch");
+  var featView = document.getElementById("featView");
+  var archView = document.getElementById("archView");
+  function setTab(arch) {
+    tabFeat.classList.toggle("on", !arch);
+    tabArch.classList.toggle("on", arch);
+    tabFeat.setAttribute("aria-selected", String(!arch));
+    tabArch.setAttribute("aria-selected", String(arch));
+    featView.classList.toggle("hide", arch);
+    archView.classList.toggle("show", arch);
+  }
+  tabFeat.addEventListener("click", function () { setTab(false); });
+  tabArch.addEventListener("click", function () { setTab(true); });
+
+  /* ---------------- Architecture view ---------------- */
+  var modules = {
+    "auth":      { label: "Sign-in",     x: 120, y: 55 },
+    "theme":     { label: "Appearance",  x: 555, y: 55 },
+    "photos":    { label: "Photos",      x: 265, y: 55 },
+    "export":    { label: "Export",      x: 415, y: 55 },
+    "plants":    { label: "Plants",      x: 265, y: 150 },
+    "log":       { label: "Care log",    x: 415, y: 150 },
+    "shared/db": { label: "Saved data",  x: 190, y: 245 }
+  };
+  var deps = [
+    ["plants", "shared/db"],
+    ["photos", "plants"],
+    ["log", "plants"],
+    ["export", "log"],
+    ["auth", "shared/db"]
+  ];
+  var NW = 110, NH = 40;
+  var svg = document.getElementById("archSvg");
+  var NS = "http://www.w3.org/2000/svg";
+
+  function center(id) {
+    var m = modules[id];
+    return { x: m.x, y: m.y };
+  }
+  /* edge endpoints trimmed to node borders (vertical-ish connection) */
+  function edgePath(from, to) {
+    var a = center(from), b = center(to);
+    var ay = a.y + (b.y > a.y ? NH / 2 : -NH / 2);
+    var by = b.y + (b.y > a.y ? -NH / 2 - 5 : NH / 2 + 5);
+    var mx = (a.x + b.x) / 2, my = (ay + by) / 2;
+    return "M" + a.x + "," + ay + " Q" + a.x + "," + my + " " + mx + "," + my +
+           " Q" + b.x + "," + my + " " + b.x + "," + by;
+  }
+
+  /* arrowhead marker */
+  var defs = document.createElementNS(NS, "defs");
+  defs.innerHTML = '<marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 z" fill="var(--line-strong)"/></marker>' +
+                   '<marker id="arrHot" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 z" fill="var(--extra)"/></marker>';
+  svg.appendChild(defs);
+
+  var edgeEls = deps.map(function (d) {
+    var p = document.createElementNS(NS, "path");
+    p.setAttribute("class", "edge");
+    p.setAttribute("d", edgePath(d[0], d[1]));
+    p.setAttribute("marker-end", "url(#arr)");
+    p.dataset.from = d[0];
+    p.dataset.to = d[1];
+    svg.appendChild(p);
+    return p;
+  });
+
+  var nodeEls = {};
+  Object.keys(modules).forEach(function (id) {
+    var m = modules[id];
+    var g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "node");
+    g.setAttribute("tabindex", "0");
+    g.setAttribute("role", "button");
+    g.setAttribute("aria-label", m.label);
+    var r = document.createElementNS(NS, "rect");
+    r.setAttribute("x", m.x - NW / 2); r.setAttribute("y", m.y - NH / 2);
+    r.setAttribute("width", NW); r.setAttribute("height", NH);
+    r.setAttribute("rx", 10);
+    var t = document.createElementNS(NS, "text");
+    t.setAttribute("x", m.x); t.setAttribute("y", m.y + 4.5);
+    t.setAttribute("text-anchor", "middle");
+    t.textContent = m.label;
+    g.appendChild(r); g.appendChild(t);
+    g.addEventListener("click", function () { selectModule(id); });
+    g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectModule(id); } });
+    svg.appendChild(g);
+    nodeEls[id] = g;
+  });
+
+  var sentence = document.getElementById("archSentence");
+  var selected = null;
+  function selectModule(id) {
+    if (selected === id) { clearModule(); return; }
+    selected = id;
+    var uses = deps.filter(function (d) { return d[0] === id; }).map(function (d) { return d[1]; });
+    var usedBy = deps.filter(function (d) { return d[1] === id; }).map(function (d) { return d[0]; });
+    Object.keys(nodeEls).forEach(function (nid) {
+      var g = nodeEls[nid];
+      g.classList.remove("sel", "dep", "dim");
+      if (nid === id) g.classList.add("sel");
+      else if (uses.indexOf(nid) >= 0 || usedBy.indexOf(nid) >= 0) g.classList.add("dep");
+      else g.classList.add("dim");
+    });
+    edgeEls.forEach(function (p) {
+      var hot = p.dataset.from === id || p.dataset.to === id;
+      p.classList.toggle("hot", hot);
+      p.classList.toggle("dim", !hot);
+      p.setAttribute("marker-end", hot ? "url(#arrHot)" : "url(#arr)");
+    });
+    function names(list) { return list.map(function (n) { return modules[n].label; }).join(" and "); }
+    var parts = [];
+    if (uses.length) parts.push("relies on <strong>" + names(uses) + "</strong>");
+    if (usedBy.length) parts.push("is used by <strong>" + names(usedBy) + "</strong>");
+    sentence.innerHTML = "<strong>" + modules[id].label + "</strong> " +
+      (parts.length ? parts.join(" and ") + "." : "stands alone — it doesn&rsquo;t rely on anything, and nothing relies on it.");
+  }
+  function clearModule() {
+    selected = null;
+    Object.keys(nodeEls).forEach(function (nid) { nodeEls[nid].classList.remove("sel", "dep", "dim"); });
+    edgeEls.forEach(function (p) { p.classList.remove("hot", "dim"); p.setAttribute("marker-end", "url(#arr)"); });
+    sentence.textContent = "Nothing selected yet — tap a block above.";
+  }
+})();
+</script>
+</body>
+</html>

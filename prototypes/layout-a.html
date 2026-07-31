@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vibe-Vision — PlantPal feature map</title>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --surface-2: #f0eeea;
+    --text: #2b2a27;
+    --text-soft: #6f6c66;
+    --line: #e3e0da;
+
+    --ok: #3d7a55;        /* built + verified */
+    --ok-bg: #eaf3ed;
+    --wait: #9a6b1f;      /* built, awaiting verify */
+    --wait-bg: #f8f0df;
+    --plan: #5b6b8c;      /* planned, not built */
+    --plan-bg: #edf0f6;
+    --extra: #7a5f8f;     /* unplanned extra */
+    --extra-bg: #f2ecf7;
+
+    --shadow: 0 1px 2px rgba(30,28,24,.06), 0 6px 20px rgba(30,28,24,.06);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #191817;
+      --surface: #232220;
+      --surface-2: #2b2a27;
+      --text: #eceae6;
+      --text-soft: #a5a29b;
+      --line: #383632;
+
+      --ok: #7fbf97;
+      --ok-bg: #223528;
+      --wait: #d9ac5f;
+      --wait-bg: #3a3120;
+      --plan: #94a6c9;
+      --plan-bg: #262c3a;
+      --extra: #b79ecf;
+      --extra-bg: #322a3b;
+
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    padding: 32px 20px 140px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+
+  /* ── Header ─────────────────────────────── */
+  header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 6px; }
+  h1 { font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+  h1 .app { color: var(--text-soft); font-weight: 500; }
+  .live {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--text-soft);
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 12px;
+  }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ok); position: relative; flex: none;
+  }
+  .live-dot::after {
+    content: ""; position: absolute; inset: -4px; border-radius: 50%;
+    border: 2px solid var(--ok); opacity: 0;
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(.4); opacity: .7; }
+    70% { transform: scale(1.15); opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .subtitle { color: var(--text-soft); font-size: 14px; margin-bottom: 26px; }
+
+  /* ── Toolbar ────────────────────────────── */
+  .toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--text-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .toggle {
+    font: inherit; font-size: 13.5px; font-weight: 550;
+    color: var(--text); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 16px; cursor: pointer; box-shadow: var(--shadow);
+    transition: background .15s;
+  }
+  .toggle:hover { background: var(--surface-2); }
+  .toggle[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  /* ── Status glyphs (shape + color) ──────── */
+  .glyph {
+    width: 22px; height: 22px; border-radius: 50%; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .glyph.sm { width: 16px; height: 16px; font-size: 9px; }
+  .g-ok   { background: var(--ok);  color: var(--surface); }             /* solid circle + check */
+  .g-wait { background: var(--wait-bg); color: var(--wait); border: 2px solid var(--wait); } /* ring + dot-dot */
+  .g-plan { background: transparent; color: var(--plan); border: 2px dashed var(--plan); }   /* dashed hollow */
+  .g-extra { background: var(--extra-bg); color: var(--extra); border: 2px solid var(--extra); border-radius: 5px; } /* square + plus */
+
+  /* ── Feature map ────────────────────────── */
+  .zone-label {
+    font-size: 12px; font-weight: 650; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-soft);
+    margin: 22px 0 10px;
+  }
+  .map { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 14px; }
+
+  .card {
+    text-align: left; font: inherit; color: inherit;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px 16px 14px;
+    cursor: pointer; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 10px;
+    transition: transform .12s ease, border-color .12s ease;
+  }
+  .card:hover { transform: translateY(-2px); }
+  .card.selected { border-color: var(--text); }
+  .card-top { display: flex; align-items: flex-start; gap: 10px; }
+  .card-name { font-size: 15px; font-weight: 600; line-height: 1.3; }
+  .card-status { font-size: 12.5px; font-weight: 550; }
+  .card.s-ok    { border-top: 3px solid var(--ok); }    .card.s-ok .card-status { color: var(--ok); }
+  .card.s-wait  { border-top: 3px solid var(--wait); }  .card.s-wait .card-status { color: var(--wait); }
+  .card.s-plan  { border-top: 3px dashed var(--plan); border-style: dashed; background: transparent; box-shadow: none; }
+  .card.s-plan .card-status { color: var(--plan); }
+  .card.s-extra { border-top: 3px solid var(--extra); } .card.s-extra .card-status { color: var(--extra); }
+
+  /* extras zone */
+  .extras {
+    margin-top: 8px; padding: 16px;
+    border: 2px dashed var(--extra); border-radius: var(--radius);
+    background: var(--extra-bg);
+  }
+  .extras .zone-label { margin-top: 0; color: var(--extra); display: flex; align-items: center; gap: 8px; }
+  .extras .zone-note { font-size: 12.5px; color: var(--text-soft); margin: -4px 0 12px; text-transform: none; letter-spacing: 0; font-weight: 450; }
+
+  /* ── Structure (architecture zoom) ──────── */
+  .structure { display: none; margin-top: 30px; }
+  .structure.open { display: block; animation: fadein .25s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+  .structure-box {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 18px 18px 8px; overflow-x: auto;
+  }
+  .structure-box h2 { font-size: 15px; font-weight: 650; margin-bottom: 2px; }
+  .structure-box .hint { font-size: 12.5px; color: var(--text-soft); margin-bottom: 6px; }
+  .structure-caption {
+    min-height: 22px; font-size: 13.5px; color: var(--text-soft);
+    padding: 4px 2px 10px;
+  }
+  .structure-caption b { color: var(--text); font-weight: 600; }
+  svg { display: block; margin: 0 auto; max-width: 100%; }
+  .node rect {
+    fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5; rx: 10;
+    transition: stroke .15s, fill .15s;
+  }
+  .node text { fill: var(--text); font-size: 12.5px; font-weight: 600; }
+  .node { cursor: pointer; }
+  .node:hover rect { stroke: var(--text-soft); }
+  .node.focus rect { stroke: var(--text); stroke-width: 2.5; }
+  .node.dep rect { stroke: var(--plan); stroke-width: 2.5; }
+  .node.dim { opacity: .3; }
+  .edge { stroke: var(--line); stroke-width: 1.8; fill: none; transition: stroke .15s, opacity .15s; }
+  .edge.hot { stroke: var(--plan); stroke-width: 2.6; }
+  .edge.dim { opacity: .18; }
+  marker path { fill: var(--line); }
+  marker.hotm path { fill: var(--plan); }
+
+  /* ── Detail panel ───────────────────────── */
+  .panel {
+    position: fixed; right: 20px; bottom: 96px; z-index: 20;
+    width: min(340px, calc(100vw - 40px));
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: 0 8px 40px rgba(0,0,0,.18);
+    padding: 20px; display: none;
+  }
+  .panel.open { display: block; animation: fadein .18s ease; }
+  .panel-close {
+    position: absolute; top: 10px; right: 12px;
+    font: inherit; font-size: 18px; line-height: 1;
+    background: none; border: none; color: var(--text-soft); cursor: pointer; padding: 4px;
+  }
+  .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; padding-right: 20px; }
+  .panel h3 { font-size: 16px; font-weight: 650; }
+  .panel .p-status { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .panel .p-explain { font-size: 13.5px; color: var(--text-soft); margin-bottom: 14px; }
+  .panel .p-evidence-label { font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--text-soft); margin-bottom: 6px; }
+  .panel ul { list-style: none; }
+  .panel li {
+    font-size: 12.5px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--text-soft); background: var(--surface-2);
+    border-radius: 7px; padding: 5px 10px; margin-bottom: 5px;
+    overflow-wrap: anywhere;
+  }
+  .panel .p-none { font-size: 13px; color: var(--text-soft); font-style: italic; }
+  .panel .p-structure {
+    margin-top: 12px; font: inherit; font-size: 13px; font-weight: 550;
+    color: var(--plan); background: none; border: none; cursor: pointer; padding: 0;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+
+  /* ── Drift strip ────────────────────────── */
+  .drift {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    background: var(--surface); border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 24px rgba(0,0,0,.07);
+    padding: 14px 20px;
+  }
+  .drift-inner {
+    max-width: 980px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px 24px;
+  }
+  .drift-counts { display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: var(--text-soft); }
+  .drift-counts span { display: inline-flex; align-items: center; gap: 7px; }
+  .drift-counts b { color: var(--text); font-weight: 650; }
+  .verdict { font-size: 14px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Your plan vs. what got built <span class="app">· PlantPal</span></h1>
+    <span class="live"><span class="live-dot"></span>Watching your repo · last update 2s ago</span>
+  </header>
+  <p class="subtitle">Every feature from your plan, painted by where it really stands. Click any card for details.</p>
+
+  <div class="toolbar">
+    <div class="legend">
+      <span><span class="glyph sm g-ok">✓</span>Built &amp; checked</span>
+      <span><span class="glyph sm g-wait">‥</span>Built, not checked yet</span>
+      <span><span class="glyph sm g-plan">○</span>Planned, not started</span>
+      <span><span class="glyph sm g-extra">＋</span>Extra (not in plan)</span>
+    </div>
+    <button class="toggle" id="structureToggle" aria-pressed="false">See the structure underneath</button>
+  </div>
+
+  <div class="zone-label">Planned features</div>
+  <div class="map" id="plannedMap"></div>
+
+  <div class="extras" id="extrasZone">
+    <div class="zone-label"><span class="glyph sm g-extra">＋</span>Unplanned extras</div>
+    <div class="zone-note">Your agent built these even though they weren’t in the plan.</div>
+    <div class="map" id="extrasMap"></div>
+  </div>
+
+  <section class="structure" id="structure">
+    <div class="structure-box">
+      <h2>The structure underneath</h2>
+      <p class="hint">How the building blocks of the app lean on each other. Click a block to see what it relies on.</p>
+      <svg id="archSvg" viewBox="0 0 660 330" width="660" height="330" role="img" aria-label="Module dependency graph">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z"></path>
+          </marker>
+          <marker id="arrHot" class="hotm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z"></path>
+          </marker>
+        </defs>
+        <g id="edges"></g>
+        <g id="nodes"></g>
+      </svg>
+      <div class="structure-caption" id="structureCaption">Nothing selected yet.</div>
+    </div>
+  </section>
+
+</div>
+
+<aside class="panel" id="panel" aria-live="polite">
+  <button class="panel-close" id="panelClose" aria-label="Close">×</button>
+  <div class="panel-head"><span class="glyph" id="panelGlyph"></span><h3 id="panelName"></h3></div>
+  <div class="p-status" id="panelStatus"></div>
+  <p class="p-explain" id="panelExplain"></p>
+  <div class="p-evidence-label">Where we saw it in the code</div>
+  <div id="panelEvidence"></div>
+  <button class="p-structure" id="panelStructure">Show this feature in the structure ↓</button>
+</aside>
+
+<div class="drift">
+  <div class="drift-inner">
+    <div class="drift-counts" id="driftCounts"></div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── Data (fake, static) ────────────────────────────────
+  var features = [
+    {id:"auth", name:"Sign in with email", status:"in-both", verified:true, evidence:["src/auth/login.ts","src/auth/session.ts"], module:"auth"},
+    {id:"plants", name:"Add & edit plants", status:"in-both", verified:true, evidence:["src/plants/crud.ts","src/plants/form.tsx"], module:"plants"},
+    {id:"photos", name:"Plant photo gallery", status:"in-both", verified:false, evidence:["src/photos/upload.ts"], module:"photos"},
+    {id:"watering", name:"Watering schedule & reminders", status:"in-plan-only", evidence:[]},
+    {id:"identify", name:"Identify plant from photo", status:"in-plan-only", evidence:[]},
+    {id:"share", name:"Share my garden page", status:"in-plan-only", evidence:[]},
+    {id:"export", name:"CSV export of care log", status:"in-code-only", evidence:["src/export/csv.ts"], module:"export"},
+    {id:"darkmode", name:"Dark mode toggle", status:"in-code-only", evidence:["src/theme/dark.ts"], module:"theme"},
+    {id:"careLog", name:"Care log timeline", status:"in-both", verified:false, evidence:["src/log/timeline.tsx","src/log/store.ts"], module:"log"},
+    {id:"notify", name:"Push notifications", status:"in-plan-only", evidence:[]}
+  ];
+
+  var modules = [
+    {id:"auth",      label:"auth",      x: 70,  y: 40},
+    {id:"photos",    label:"photos",    x: 290, y: 40},
+    {id:"export",    label:"export",    x: 500, y: 40},
+    {id:"plants",    label:"plants",    x: 180, y: 140},
+    {id:"log",       label:"log",       x: 400, y: 140},
+    {id:"theme",     label:"theme",     x: 560, y: 140},
+    {id:"shared/db", label:"shared/db", x: 180, y: 250}
+  ];
+  var deps = [
+    {from:"plants", to:"shared/db"},
+    {from:"photos", to:"plants"},
+    {from:"log",    to:"plants"},
+    {from:"export", to:"log"},
+    {from:"auth",   to:"shared/db"}
+  ];
+  var NODE_W = 120, NODE_H = 44;
+
+  // ── Status vocabulary (non-coder wording) ──────────────
+  function kind(f) {
+    if (f.status === "in-both" && f.verified) return "ok";
+    if (f.status === "in-both") return "wait";
+    if (f.status === "in-plan-only") return "plan";
+    return "extra";
+  }
+  var STATUS = {
+    ok:    { glyph: "✓", cls: "g-ok",    label: "Built & checked",
+             explain: "This was in your plan, the agent built it, and it passed a live check in the browser. Done and working." },
+    wait:  { glyph: "‥", cls: "g-wait",  label: "Built — not checked yet",
+             explain: "This was in your plan and the agent says it built it, but nobody has watched it actually work in the browser yet. Treat it as “probably done.”" },
+    plan:  { glyph: "○", cls: "g-plan",  label: "Planned — not started",
+             explain: "This is in your plan, but there’s no sign of it in the code yet. The agent hasn’t built it." },
+    extra: { glyph: "＋", cls: "g-extra", label: "Extra — not in your plan",
+             explain: "The agent built this on its own — it never appeared in your plan. Worth a look: keep it, or ask why it’s there." }
+  };
+
+  // ── Render feature cards ───────────────────────────────
+  var plannedMap = document.getElementById("plannedMap");
+  var extrasMap = document.getElementById("extrasMap");
+
+  features.forEach(function (f) {
+    var k = kind(f);
+    var s = STATUS[k];
+    var btn = document.createElement("button");
+    btn.className = "card s-" + k;
+    btn.setAttribute("data-id", f.id);
+    btn.innerHTML =
+      '<div class="card-top"><span class="glyph ' + s.cls + '">' + s.glyph + '</span>' +
+      '<span class="card-name">' + f.name + '</span></div>' +
+      '<span class="card-status">' + s.label + '</span>';
+    btn.addEventListener("click", function () { openPanel(f); });
+    (k === "extra" ? extrasMap : plannedMap).appendChild(btn);
+  });
+
+  // ── Drift strip ────────────────────────────────────────
+  var built = features.filter(function (f) { return f.status === "in-both"; });
+  var verified = built.filter(function (f) { return f.verified; });
+  var planOnly = features.filter(function (f) { return f.status === "in-plan-only"; });
+  var extras = features.filter(function (f) { return f.status === "in-code-only"; });
+  var plannedTotal = built.length + planOnly.length;
+
+  document.getElementById("driftCounts").innerHTML =
+    '<span><span class="glyph sm g-ok">✓</span><b>' + verified.length + '</b>&nbsp;checked</span>' +
+    '<span><span class="glyph sm g-wait">‥</span><b>' + (built.length - verified.length) + '</b>&nbsp;awaiting check</span>' +
+    '<span><span class="glyph sm g-plan">○</span><b>' + planOnly.length + '</b>&nbsp;not started</span>' +
+    '<span><span class="glyph sm g-extra">＋</span><b>' + extras.length + '</b>&nbsp;extras</span>';
+
+  document.getElementById("verdict").textContent =
+    built.length + " of " + plannedTotal + " planned features built, " + extras.length + " extras appeared.";
+
+  // ── Detail panel ───────────────────────────────────────
+  var panel = document.getElementById("panel");
+  var selectedCard = null;
+  var currentFeature = null;
+
+  function openPanel(f) {
+    currentFeature = f;
+    var k = kind(f);
+    var s = STATUS[k];
+    var g = document.getElementById("panelGlyph");
+    g.className = "glyph " + s.cls;
+    g.textContent = s.glyph;
+    document.getElementById("panelName").textContent = f.name;
+    var st = document.getElementById("panelStatus");
+    st.textContent = s.label;
+    st.style.color = "var(--" + (k === "ok" ? "ok" : k) + ")";
+    document.getElementById("panelExplain").textContent = s.explain;
+
+    var ev = document.getElementById("panelEvidence");
+    if (f.evidence.length) {
+      ev.innerHTML = "<ul>" + f.evidence.map(function (e) { return "<li>" + e + "</li>"; }).join("") + "</ul>";
+    } else {
+      ev.innerHTML = '<p class="p-none">Nothing yet — no trace of this feature in the code.</p>';
+    }
+    document.getElementById("panelStructure").style.display = f.module ? "" : "none";
+
+    if (selectedCard) selectedCard.classList.remove("selected");
+    selectedCard = document.querySelector('.card[data-id="' + f.id + '"]');
+    if (selectedCard) selectedCard.classList.add("selected");
+    panel.classList.add("open");
+  }
+  function closePanel() {
+    panel.classList.remove("open");
+    if (selectedCard) selectedCard.classList.remove("selected");
+    selectedCard = null;
+    currentFeature = null;
+  }
+  document.getElementById("panelClose").addEventListener("click", closePanel);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closePanel(); });
+
+  // ── Architecture zoom ──────────────────────────────────
+  var structureEl = document.getElementById("structure");
+  var toggleBtn = document.getElementById("structureToggle");
+
+  function setStructure(open) {
+    structureEl.classList.toggle("open", open);
+    toggleBtn.setAttribute("aria-pressed", String(open));
+    toggleBtn.textContent = open ? "Hide the structure" : "See the structure underneath";
+  }
+  toggleBtn.addEventListener("click", function () {
+    setStructure(!structureEl.classList.contains("open"));
+  });
+
+  document.getElementById("panelStructure").addEventListener("click", function () {
+    if (!currentFeature || !currentFeature.module) return;
+    setStructure(true);
+    focusModule(currentFeature.module);
+    structureEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  // Build the SVG graph
+  var svgNS = "http://www.w3.org/2000/svg";
+  var edgesG = document.getElementById("edges");
+  var nodesG = document.getElementById("nodes");
+  var nodeEls = {}, edgeEls = [];
+
+  function center(m) { return { x: m.x + NODE_W / 2, y: m.y + NODE_H / 2 }; }
+  function byId(id) { return modules.filter(function (m) { return m.id === id; })[0]; }
+
+  deps.forEach(function (d) {
+    var a = center(byId(d.from)), b = center(byId(d.to));
+    // shorten the line so the arrowhead lands at the node border
+    var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy);
+    var pad = 34;
+    var bx = b.x - (dx / len) * pad, by = b.y - (dy / len) * pad;
+    var ax = a.x + (dx / len) * pad, ay = a.y + (dy / len) * pad;
+    var line = document.createElementNS(svgNS, "line");
+    line.setAttribute("x1", ax); line.setAttribute("y1", ay);
+    line.setAttribute("x2", bx); line.setAttribute("y2", by);
+    line.setAttribute("class", "edge");
+    line.setAttribute("marker-end", "url(#arr)");
+    edgesG.appendChild(line);
+    edgeEls.push({ el: line, from: d.from, to: d.to });
+  });
+
+  modules.forEach(function (m) {
+    var g = document.createElementNS(svgNS, "g");
+    g.setAttribute("class", "node");
+    g.setAttribute("transform", "translate(" + m.x + "," + m.y + ")");
+    var rect = document.createElementNS(svgNS, "rect");
+    rect.setAttribute("width", NODE_W); rect.setAttribute("height", NODE_H);
+    rect.setAttribute("rx", 10);
+    var text = document.createElementNS(svgNS, "text");
+    text.setAttribute("x", NODE_W / 2); text.setAttribute("y", NODE_H / 2 + 4.5);
+    text.setAttribute("text-anchor", "middle");
+    text.textContent = m.label;
+    g.appendChild(rect); g.appendChild(text);
+    g.addEventListener("click", function () { focusModule(m.id); });
+    nodesG.appendChild(g);
+    nodeEls[m.id] = g;
+  });
+
+  var caption = document.getElementById("structureCaption");
+
+  function focusModule(id) {
+    var reliesOn = deps.filter(function (d) { return d.from === id; }).map(function (d) { return d.to; });
+    var usedBy = deps.filter(function (d) { return d.to === id; }).map(function (d) { return d.from; });
+
+    Object.keys(nodeEls).forEach(function (nid) {
+      var el = nodeEls[nid];
+      el.classList.remove("focus", "dep", "dim");
+      if (nid === id) el.classList.add("focus");
+      else if (reliesOn.indexOf(nid) >= 0 || usedBy.indexOf(nid) >= 0) el.classList.add("dep");
+      else el.classList.add("dim");
+    });
+    edgeEls.forEach(function (e) {
+      var hot = e.from === id || e.to === id;
+      e.el.classList.toggle("hot", hot);
+      e.el.classList.toggle("dim", !hot);
+      e.el.setAttribute("marker-end", hot ? "url(#arrHot)" : "url(#arr)");
+    });
+
+    var parts = [];
+    if (reliesOn.length) parts.push("relies on <b>" + reliesOn.join("</b>, <b>") + "</b>");
+    if (usedBy.length) parts.push("used by <b>" + usedBy.join("</b>, <b>") + "</b>");
+    caption.innerHTML = "<b>" + id + "</b> " + (parts.length ? parts.join(" · ") : "stands alone — nothing depends on it and it depends on nothing.");
+  }
+})();
+</script>
+</body>
+</html>
